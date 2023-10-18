@@ -51,7 +51,7 @@ namespace ConsoleApp13
         {
             for (int i = 0; i < products.Count; i++)
             {
-                if (products[i].Name == userInput)
+                if (products[i].Name.ToLower() == userInput.ToLower())
                 {
                     return true;
                 }
@@ -68,11 +68,13 @@ namespace ConsoleApp13
 
     class Client
     {
+        public int Id { get; private set; }
         public int Money { get; private set; }
         private List<Product> _products = new List<Product>();
 
-        public Client(int money, List<Product> products)
+        public Client(int money, List<Product> products, int id)
         {
+            Id = id;
             Money = money;
             _products = products;
         }
@@ -84,9 +86,9 @@ namespace ConsoleApp13
 
         public void showProducts()
         {
-            for (int i = 0; i < _products.Count - 1; i++)
+            for (int i = 0; i < _products.Count; i++)
             {
-                Console.WriteLine(_products[i].Name + _products[i].Price);
+                Console.WriteLine(_products[i].Name + " " + _products[i].Price);
             }
         }
 
@@ -111,7 +113,7 @@ namespace ConsoleApp13
 
     class Market
     {
-        private Client _client = new Client(0, null);
+        private Client _client = new Client(0, null, 0);
         private BoxOffice _boxOffice = new BoxOffice(0);
         private List<Product> _products = new List<Product>();
 
@@ -135,37 +137,47 @@ namespace ConsoleApp13
 
         public void TransferProduct(Client client, string userInput)
         {
-            if (_boxOffice.TryGetProduct(userInput, _products))
+            if (_boxOffice.TryGetProduct(userInput, _products) == true)
             {
                 for (int i = 0; i < _products.Count; i++)
                 {
-                    if (_products[i].Name == userInput)
+                    if (_products[i].Name.ToLower() == userInput.ToLower())
                     {
                         client.TakeProduct(_products[i]);
 
                         _products.RemoveAt(i);
-
-                        _boxOffice.TakeMoney(_client.GiveMoney(_products[i].Price));
+                        break;
                     }
                 }
-            }           
+            }
+            else if(_boxOffice.TryGetProduct(userInput, _products) == false)
+            {
+                Console.WriteLine("Такого продукта нет в магазине");
+            }
         }
 
         public void ServeCustomers()
         {
             string userInput;
+            int minimalMoney = 50;
+            int maximalMoney = 2000;
+            int minimalCustomersNumber = 1;
+            int maximalCustomersNumber = 6;
             Product product = new Product(null, 0);
             Queue<Client> clients = new Queue<Client>();
             Random random = new Random();
             bool isWorking = true;
             ConsoleKeyInfo commandKey;
-            int randomCustomersNumber = random.Next(1, 6);
+            int randomCustomersNumber = random.Next(minimalCustomersNumber, maximalCustomersNumber);
+            int numberOfCustomer = 0;
 
             AddProductsToMarket(_products, product);
 
             for (int i = 0; i < randomCustomersNumber; i++)
             {
-                Client client = new Client(random.Next(50, 2000), null);
+                List<Product> customerProducts = new List<Product>();
+                Client client = new Client(random.Next(minimalMoney, maximalMoney), customerProducts, numberOfCustomer);
+                Console.WriteLine("Деньги клиента номер " + numberOfCustomer + ": " + client.Money);
 
                 while (isWorking)
                 {
@@ -179,7 +191,11 @@ namespace ConsoleApp13
                         Console.WriteLine("Выберите товар");
                         userInput = Console.ReadLine();
 
-                        TransferProduct(client, userInput);                       
+                        TransferProduct(client, userInput);
+
+                        Console.WriteLine("В корзине:");
+
+                        client.showProducts();
                     }
                     else if (commandKey.Key == ConsoleKey.W)
                     {
@@ -187,41 +203,49 @@ namespace ConsoleApp13
                     }
                     else if(commandKey.Key == ConsoleKey.E)
                     {
-                        isWorking = false;
+                        break;
                     }
-
-                    clients.Enqueue(client);
                 }
 
-                Console.WriteLine("Первый клиент купил:");
+                clients.Enqueue(client);
+
+                Console.WriteLine("клиент "+ client.Id + " взял:");
 
                 client.showProducts();
+                numberOfCustomer++;
             }
 
             while (clients.Count > 0)
             {
 
-                for (int j = 0; j < clients.Peek().GetProducts().Count; j++)
+                for (int j = 0; j < clients.Peek().GetProducts().Count ; j++)
                 {
-                    if (_boxOffice.TryGetMoney(clients.Peek(), clients.Peek().GetProducts()[j]))
+                    if (_boxOffice.TryGetMoney(clients.Peek(), clients.Peek().GetProducts()[j]) == true)
                     {
                         _boxOffice.TakeMoney(clients.Peek().GiveMoney(clients.Peek().GetProducts()[j].Price));
+
+                        Console.WriteLine("Клиент купил " + clients.Peek().GetProducts()[j].Name);
+
+                        Console.WriteLine("Осталось денег: " + clients.Peek().Money);
                     }
-                    else
+                    else if (_boxOffice.TryGetMoney(clients.Peek(), clients.Peek().GetProducts()[j]) == false)
                     {
-                        clients.Peek().GiveProduct();
-                        return;
+                        Console.WriteLine("Пришлось вернуть " + clients.Peek().GetProducts()[j].Name);
+
+                        clients.Peek().GiveProduct();                    
                     }
                 }
 
-                if (clients.Peek().GetProducts() == null)
-                {
-                    clients.Dequeue();
-                }
+                Console.WriteLine("Клиент " + clients.Peek().Id + " закончил свои покупки и ушёл!");
 
-                if (clients.Count <= 0)
+                clients.Dequeue();
+
+                numberOfCustomer--;
+
+                if (numberOfCustomer == 0)
                 {
                     Console.WriteLine("Очередь опустела!");
+
                     return;
                 }
             }
