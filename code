@@ -1,0 +1,259 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ConsoleApp13
+{
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            Market market = new Market();
+
+            market.ServeCustomers();
+        }
+    }
+
+    class Product
+    {
+        public string Name { get; private set; }
+        public int Price { get; private set; }
+
+        public Product(string name, int price)
+        {
+            Name = name;
+            Price = price;
+        }
+    }
+
+    class BoxOffice
+    {
+        private int _money;
+
+        public BoxOffice(int money)
+        {
+            _money = money;
+        }
+
+        public bool TryGetMoney(Client client, Product product)
+        {
+            if (product.Price <= client.Money)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool TryGetProduct(string userInput, List<Product> products)
+        {
+            for (int i = 0; i < products.Count; i++)
+            {
+                if (products[i].Name == userInput)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public void TakeMoney(int price)
+        {
+            _money += price;
+        }
+    }
+
+    class Client
+    {
+        public int Money { get; private set; }
+        private List<Product> _products = new List<Product>();
+
+        public Client(int money, List<Product> products)
+        {
+            Money = money;
+            _products = products;
+        }
+
+        public List<Product> GetProducts()
+        {
+            return _products;
+        }
+
+        public void showProducts()
+        {
+            for (int i = 0; i < _products.Count - 1; i++)
+            {
+                Console.WriteLine(_products[i].Name + _products[i].Price);
+            }
+        }
+
+        public void TakeProduct(Product product)
+        {
+            _products.Add(product);
+        }
+
+        public Product GiveProduct()
+        {
+            Product product = _products[_products.Count - 1];
+            _products.Remove(product);
+            return product;
+        }
+
+        public int GiveMoney(int price)
+        {
+            Money -= price;
+            return price;
+        }
+    }
+
+    class Market
+    {
+        private Client _client = new Client(0, null);
+        private BoxOffice _boxOffice = new BoxOffice(0);
+        private List<Product> _products = new List<Product>();
+
+        public void AddProduct(Product product)
+        {
+            _products.Add(product);
+        }
+
+        public void ShowProducts()
+        {
+            foreach (Product product in _products)
+            {
+                Console.WriteLine("Название товара: " + product.Name + " Цена товара: " + product.Price);
+            }
+        }
+
+        public void ReturnProductToMarket()
+        {
+            _products.Add(_client.GiveProduct());
+        }
+
+        public void TransferProduct(Client client, string userInput)
+        {
+            if (_boxOffice.TryGetProduct(userInput, _products))
+            {
+                for (int i = 0; i < _products.Count; i++)
+                {
+                    if (_products[i].Name == userInput)
+                    {
+                        client.TakeProduct(_products[i]);
+
+                        _products.RemoveAt(i);
+
+                        _boxOffice.TakeMoney(_client.GiveMoney(_products[i].Price));
+                    }
+                }
+            }           
+        }
+
+        public void ServeCustomers()
+        {
+            string userInput;
+            Product product = new Product(null, 0);
+            Queue<Client> clients = new Queue<Client>();
+            Random random = new Random();
+            bool isWorking = true;
+            ConsoleKeyInfo commandKey;
+            int randomCustomersNumber = random.Next(1, 6);
+
+            AddProductsToMarket(_products, product);
+
+            for (int i = 0; i < randomCustomersNumber; i++)
+            {
+                Client client = new Client(random.Next(50, 2000), null);
+
+                while (isWorking)
+                {
+                    Console.WriteLine("Выбрать товар - Q");
+                    Console.WriteLine("Показать список товаров - W");
+                    Console.WriteLine("Пойти к кассе - E");
+                    commandKey = Console.ReadKey(true);
+
+                    if (commandKey.Key == ConsoleKey.Q)
+                    {
+                        Console.WriteLine("Выберите товар");
+                        userInput = Console.ReadLine();
+
+                        TransferProduct(client, userInput);                       
+                    }
+                    else if (commandKey.Key == ConsoleKey.W)
+                    {
+                        ShowProducts();
+                    }
+                    else if(commandKey.Key == ConsoleKey.E)
+                    {
+                        isWorking = false;
+                    }
+
+                    clients.Enqueue(client);
+                }
+
+                Console.WriteLine("Первый клиент купил:");
+
+                client.showProducts();
+            }
+
+            while (clients.Count > 0)
+            {
+
+                for (int j = 0; j < clients.Peek().GetProducts().Count; j++)
+                {
+                    if (_boxOffice.TryGetMoney(clients.Peek(), clients.Peek().GetProducts()[j]))
+                    {
+                        _boxOffice.TakeMoney(clients.Peek().GiveMoney(clients.Peek().GetProducts()[j].Price));
+                    }
+                    else
+                    {
+                        clients.Peek().GiveProduct();
+                        return;
+                    }
+                }
+
+                if (clients.Peek().GetProducts() == null)
+                {
+                    clients.Dequeue();
+                }
+
+                if (clients.Count <= 0)
+                {
+                    Console.WriteLine("Очередь опустела!");
+                    return;
+                }
+            }
+        }
+
+        public void AddProductsToMarket(List<Product> products, Product product)
+        {
+            products.Add(product = new Product("Замороженные котлеты", 120));
+            products.Add(product = new Product("Замороженные котлеты", 120));
+            products.Add(product = new Product("Замороженные котлеты", 120));
+            products.Add(product = new Product("Замороженные котлеты", 120));
+            products.Add(product = new Product("Огурец", 20));
+            products.Add(product = new Product("Огурец", 20));
+            products.Add(product = new Product("Огурец", 20));
+            products.Add(product = new Product("Огурец", 20));
+            products.Add(product = new Product("Огурец", 20));
+            products.Add(product = new Product("Помидор", 30));
+            products.Add(product = new Product("Помидор", 30));
+            products.Add(product = new Product("Сосиски", 250));
+            products.Add(product = new Product("Колбаса", 300));
+            products.Add(product = new Product("Колбаса", 300));
+            products.Add(product = new Product("Колбаса", 300));
+            products.Add(product = new Product("Колбаса", 300));
+            products.Add(product = new Product("Свинина", 250));
+            products.Add(product = new Product("Фумигатор", 1000));
+            products.Add(product = new Product("Фумигатор", 1000));
+            products.Add(product = new Product("Креветки", 700));
+            products.Add(product = new Product("Растворимый кофе", 319));
+            products.Add(product = new Product("Арбуз", 300));
+            products.Add(product = new Product("Соковыжималка", 1499));
+            products.Add(product = new Product("Печенье", 58));
+            products.Add(product = new Product("Сыр", 215));
+        }
+    }
+}
