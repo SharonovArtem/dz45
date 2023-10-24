@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ConsoleApp13
 {
@@ -12,20 +9,20 @@ namespace ConsoleApp13
         {
             Market market = new Market();
 
-            market.ServeCustomers();
+            market.Work();
         }
     }
 
     class Product
     {
-        public string Name { get; private set; }
-        public int Price { get; private set; }
-
         public Product(string name, int price)
         {
             Name = name;
             Price = price;
         }
+
+        public string Name { get; private set; }
+        public int Price { get; private set; }
     }
 
     class BoxOffice
@@ -37,9 +34,9 @@ namespace ConsoleApp13
             _money = money;
         }
 
-        public bool TryGetMoney(Client client, Product product)
+        public bool TryGetMoney(Client client, int money)
         {
-            if (product.Price <= client.Money)
+            if (money <= client.Money)
             {
                 return true;
             }
@@ -68,8 +65,6 @@ namespace ConsoleApp13
 
     class Client
     {
-        public int Id { get; private set; }
-        public int Money { get; private set; }
         private List<Product> _products = new List<Product>();
 
         public Client(int money, List<Product> products, int id)
@@ -78,13 +73,16 @@ namespace ConsoleApp13
             Money = money;
             _products = products;
         }
+        public int Id { get; private set; }
+        public int Money { get; private set; }
 
         public List<Product> GetProducts()
         {
-            return _products;
+            List<Product> products = _products;
+            return products;
         }
 
-        public void showProducts()
+        public void ShowProducts()
         {
             for (int i = 0; i < _products.Count; i++)
             {
@@ -117,22 +115,12 @@ namespace ConsoleApp13
         private BoxOffice _boxOffice = new BoxOffice(0);
         private List<Product> _products = new List<Product>();
 
-        public void AddProduct(Product product)
-        {
-            _products.Add(product);
-        }
-
         public void ShowProducts()
         {
             foreach (Product product in _products)
             {
                 Console.WriteLine("Название товара: " + product.Name + " Цена товара: " + product.Price);
             }
-        }
-
-        public void ReturnProductToMarket()
-        {
-            _products.Add(_client.GiveProduct());
         }
 
         public void TransferProduct(Client client, string userInput)
@@ -150,28 +138,64 @@ namespace ConsoleApp13
                     }
                 }
             }
-            else if(_boxOffice.TryGetProduct(userInput, _products) == false)
+            else 
             {
                 Console.WriteLine("Такого продукта нет в магазине");
             }
         }
 
-        public void ServeCustomers()
+        public void Work()
         {
-            string userInput;
-            int minimalMoney = 50;
-            int maximalMoney = 2000;
+            Queue<Client> clients = new Queue<Client>();
+            Product product = new Product(null, 0);
+
+            AddProducts(_products);
+
+            MakeQueue(clients);
+
+            PayAtTheCHeckout(clients, product);
+        }
+
+        public void AddProducts(List<Product> products)
+        {
+            List<Product> assortment = new List<Product>();
+            Random random = new Random();
+
+            assortment.Add(new Product("Замороженные котлеты", 120));
+            assortment.Add(new Product("Огурец", 20));
+            assortment.Add(new Product("Помидор", 30));
+            assortment.Add(new Product("Сосиски", 250));
+            assortment.Add(new Product("Колбаса", 300));
+            assortment.Add(new Product("Свинина", 250));
+            assortment.Add(new Product("Фумигатор", 1000));
+            assortment.Add(new Product("Креветки", 700));
+            assortment.Add(new Product("Растворимый кофе", 319));
+            assortment.Add(new Product("Арбуз", 300));
+            assortment.Add(new Product("Соковыжималка", 1499));
+            assortment.Add(new Product("Печенье", 58));
+            assortment.Add(new Product("Сыр", 215));
+
+            for (int i = 0; i < assortment.Count; i++)
+            {
+                for(int j = 0; j < random.Next(1, 6); j++)
+                {
+                    products.Add(assortment[i]);
+                }
+            }
+        }
+
+        public void MakeQueue(Queue<Client> clients)
+        {
+            Random random = new Random();
+            ConsoleKeyInfo commandKey;
             int minimalCustomersNumber = 1;
             int maximalCustomersNumber = 6;
-            Product product = new Product(null, 0);
-            Queue<Client> clients = new Queue<Client>();
-            Random random = new Random();
-            bool isWorking = true;
-            ConsoleKeyInfo commandKey;
+            int minimalMoney = 50;
+            int maximalMoney = 2000;
             int randomCustomersNumber = random.Next(minimalCustomersNumber, maximalCustomersNumber);
             int numberOfCustomer = 0;
-
-            AddProductsToMarket(_products, product);
+            bool isWorking = true;
+            string userInput;            
 
             for (int i = 0; i < randomCustomersNumber; i++)
             {
@@ -195,13 +219,13 @@ namespace ConsoleApp13
 
                         Console.WriteLine("В корзине:");
 
-                        client.showProducts();
+                        client.ShowProducts();
                     }
                     else if (commandKey.Key == ConsoleKey.W)
                     {
                         ShowProducts();
                     }
-                    else if(commandKey.Key == ConsoleKey.E)
+                    else if (commandKey.Key == ConsoleKey.E)
                     {
                         break;
                     }
@@ -209,34 +233,41 @@ namespace ConsoleApp13
 
                 clients.Enqueue(client);
 
-                Console.WriteLine("клиент "+ client.Id + " взял:");
+                Console.WriteLine("клиент " + client.Id + " взял:");
 
-                client.showProducts();
+                client.ShowProducts();
                 numberOfCustomer++;
             }
+        }
+
+        public void PayAtTheCHeckout(Queue<Client> clients, Product product)
+        {
+            product = new Product(null, 0);
+            Random random = new Random();
+            int numberOfCustomer = 0;
 
             while (clients.Count > 0)
             {
+                Client client = clients.Peek();
 
-                for (int j = 0; j < clients.Peek().GetProducts().Count ; j++)
+                for (int j = 0; j < clients.Peek().GetProducts().Count; j++)
                 {
-                    if (_boxOffice.TryGetMoney(clients.Peek(), clients.Peek().GetProducts()[j]) == true)
+                    if (_boxOffice.TryGetMoney(client, client.GetProducts()[j].Price) == true)
                     {
-                        _boxOffice.TakeMoney(clients.Peek().GiveMoney(clients.Peek().GetProducts()[j].Price));
+                        _boxOffice.TakeMoney(client.GiveMoney(client.GetProducts()[j].Price));
 
-                        Console.WriteLine("Клиент купил " + clients.Peek().GetProducts()[j].Name);
-
-                        Console.WriteLine("Осталось денег: " + clients.Peek().Money);
+                        Console.WriteLine("Клиент купил " + client.GetProducts()[j].Name);
+                        Console.WriteLine("Осталось денег: " + client.Money);
                     }
-                    else if (_boxOffice.TryGetMoney(clients.Peek(), clients.Peek().GetProducts()[j]) == false)
+                    else if (_boxOffice.TryGetMoney(client, client.GetProducts()[j].Price) == false)
                     {
-                        Console.WriteLine("Пришлось вернуть " + clients.Peek().GetProducts()[j].Name);
+                        Console.WriteLine("Пришлось вернуть " + client.GetProducts()[j].Name);
 
-                        clients.Peek().GiveProduct();                    
+                        clients.Peek().GiveProduct();
                     }
                 }
 
-                Console.WriteLine("Клиент " + clients.Peek().Id + " закончил свои покупки и ушёл!");
+                Console.WriteLine("Клиент " + client.Id + " закончил свои покупки и ушёл!");
 
                 clients.Dequeue();
 
@@ -249,35 +280,6 @@ namespace ConsoleApp13
                     return;
                 }
             }
-        }
-
-        public void AddProductsToMarket(List<Product> products, Product product)
-        {
-            products.Add(product = new Product("Замороженные котлеты", 120));
-            products.Add(product = new Product("Замороженные котлеты", 120));
-            products.Add(product = new Product("Замороженные котлеты", 120));
-            products.Add(product = new Product("Замороженные котлеты", 120));
-            products.Add(product = new Product("Огурец", 20));
-            products.Add(product = new Product("Огурец", 20));
-            products.Add(product = new Product("Огурец", 20));
-            products.Add(product = new Product("Огурец", 20));
-            products.Add(product = new Product("Огурец", 20));
-            products.Add(product = new Product("Помидор", 30));
-            products.Add(product = new Product("Помидор", 30));
-            products.Add(product = new Product("Сосиски", 250));
-            products.Add(product = new Product("Колбаса", 300));
-            products.Add(product = new Product("Колбаса", 300));
-            products.Add(product = new Product("Колбаса", 300));
-            products.Add(product = new Product("Колбаса", 300));
-            products.Add(product = new Product("Свинина", 250));
-            products.Add(product = new Product("Фумигатор", 1000));
-            products.Add(product = new Product("Фумигатор", 1000));
-            products.Add(product = new Product("Креветки", 700));
-            products.Add(product = new Product("Растворимый кофе", 319));
-            products.Add(product = new Product("Арбуз", 300));
-            products.Add(product = new Product("Соковыжималка", 1499));
-            products.Add(product = new Product("Печенье", 58));
-            products.Add(product = new Product("Сыр", 215));
         }
     }
 }
